@@ -1,30 +1,66 @@
 <?php
 
 namespace App\Controllers;
-
-use App\Controllers\BaseController;
-use CodeIgniter\API\ResponseTrait;
 use App\Models\UserModel;
+use CodeIgniter\RESTful\BaseController;
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+use ResponseTrait;
+
+
+function decodeJWT($token)
+{
+    $key = getenv('JWT_SECRET_KEY');
+
+    try {
+        $decoded = JWT::decode($token, new Key($key, 'HS256'));
+        return (array) $decoded;
+    } catch (Exception $e) {
+
+        return null;
+    }
+}
 
 class User extends BaseController
 {
-    use ResponseTrait;
+
+    protected $modelName = 'App\Models\UserModel';
+    protected $format    = 'json';
 
     public function index()
     {
-        // CODE IGNITER 4
 
-        // tu dois récupérer le token passé en authorization
-        // décode le token en utilisant la lib firebase jwt php
-        // tu récupères l'email de l'utilisateur
+        $authHeader = $this->request->getHeaderLine('Authorization');
+        if (!$authHeader) {
+            return $this->respond(['message' => 'Missing Token'], 401);
+        }
 
-        $userModel = new UserModel;
+        list($type, $token) = explode(' ', $authHeader);
 
-        // tu fais une requête pour récupérer l'utilisateur en utilisant l'email avec UserModel
+        if (strtolower($type) !== 'bearer') {
+            return $this->respond(['message' => 'Token type invalid'], 401);
+        }
 
-        // si l'utilisateur n'existe pas tu retournes une erreur 404 avec un message en anglais
+        $decoded = decodeJWT($token);
 
-        // tu retournes l'user
-        return $this->respond(['user' => $userModel->find(array('email' => 'test@test.com'))], 200);
+        if (!$decoded) {
+            return $this->respond(['message' => 'Token invalid'], 401);
+        }
+
+        $email = $decoded['email'] ?? null;
+
+        if (!$email) {
+            return $this->respond(['message' => 'Email not found in the token'], 401);
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->where('email', $email)->first();
+
+        if (!$user) {
+            return $this->respond(['message' => 'User not found'], 404);
+        }
+
+        return $this->respond($user);
     }
+
 }

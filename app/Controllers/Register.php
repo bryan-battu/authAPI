@@ -28,7 +28,24 @@ class Register extends BaseController
             ];
             $model->save($data);
 
-            return $this->respond(['message' => 'Registered Successfully'], 200);
+            $key = getenv('JWT_SECRET');
+            $iat = time();
+            $exp = $iat + 3600;
+
+            $payload = array(
+                "iat" => $iat,
+                "exp" => $exp,
+                "email" => $data['email'],
+            );
+
+            $token = \Firebase\JWT\JWT::encode($payload, $key, 'HS256');
+
+            $response = [
+                'message' => 'User registered successfully',
+                'token' => $token
+            ];
+
+            return $this->respond($response, 200);
         }else{
             $response = [
                 'errors' => $this->validator->getErrors(),

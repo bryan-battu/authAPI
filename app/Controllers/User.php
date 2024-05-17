@@ -73,27 +73,6 @@ class User extends BaseController
     }
 
     public function edit($id) {
-        $userModel = new UserModel();
-        $user = $userModel->where('id', $id)->first();
-
-        if (!$user) {
-            return $this->respond(['message' => 'User not found'], 404);
-        }
-
-        if (!in_array('ROLE_ADMIN', explode(',', $user['roles']))) {
-            $response = [
-                'message' => 'You do not have permission to edit user'
-            ];
-
-            return $this->respond($response, 403);
-        }
-
-        $user = $userModel->where('id', $id)->first();
-
-        if (!$user) {
-            return $this->respond(['message' => 'User not found'], 404);
-        }
-
         $rules = [
             'login' => ['rules' => 'required|min_length[4]|max_length[255]|is_unique[users.login]'],
             'password' => ['rules' => 'required|min_length[8]|max_length[255]'],
@@ -101,24 +80,50 @@ class User extends BaseController
             'status' => ['rules' => 'required|in_list[open,closed]'],
         ];
 
-        if ($this->validate($rules)) {
-            $data = [
-                'login'      => $this->request->getVar('login'),
-                'password'   => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
-                'roles'      => $this->request->getVar('roles'),
-                'status'     => $this->request->getVar('status'),
-                'updated_at' => date('Y-m-d H:i:s'),
-            ];
+        $uid = $this->request->getHeaderLine('uid');
 
+        $userModel = new UserModel();
+
+        $data = [
+            'login'      => $this->request->getVar('login'),
+            'password'   => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
+            'roles'      => $this->request->getVar('roles'),
+            'status'     => $this->request->getVar('status'),
+            'updated_at' => date('Y-m-d H:i:s'),
+        ];
+
+        $tokenUser = $userModel->where('id', $uid)->first();
+
+        if (!$tokenUser) {
+            return $this->fail('User not found', 404);
+        }
+
+        if (!in_array('ROLE_ADMIN', explode(',', $tokenUser['roles']))) {
+            unset($data['roles']);
+
+            if($uid != $id && $id != 'me') {
+                return $this->fail('Access denied', 401);
+            }
+        }
+
+        $user = $userModel->where('id', $id)->first();
+
+        if (!$user) {
+            return $this->fail('User not found', 409);
+        }
+
+        if ($this->validate($rules)) {
             $userModel->update($user['id'], $data);
+
+            $user = $userModel->where('id', $id)->first();
 
             $response = [
                 'uid' => $user['uid'],
-                'login' => $data['login'],
-                'roles' => $data['roles'],
-                'status' => $data['status'],
+                'login' => $user['login'],
+                'roles' => $user['roles'],
+                'status' => $user['status'],
                 'created_at' => $user['created_at'],
-                'updated_at' => $data['updated_at'],
+                'updated_at' => $user['updated_at'],
             ];
 
             return $this->respond($response);

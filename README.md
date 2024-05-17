@@ -18,20 +18,20 @@ Suivre les instructions présentes dans la section JWT du fichier `.env`
 
 Pour mettre en place la base de données et démarrer l'application, veuillez exécuter les commandes suivantes :
 
-1. Exécutez la migration pour créer les tables de base de données :
+1. Installez les dépendances PHP en exécutant la commande suivante à la racine du projet :
    ```bash
-   php spark migrate
-    ```
+   composer install
+   ```
    
 2. Ensuite, construisez et démarrez les conteneurs Docker avec :
    ```bash
    docker-compose up -d
    ```
    
-3. Installez les dépendances PHP en exécutant la commande suivante à la racine du projet :
+3. Exécutez la migration pour créer les tables de base de données :
    ```bash
-   composer install
-   ```
+   php spark migrate
+    ```
    
 4. Lancer l'application avec :
    ```bash

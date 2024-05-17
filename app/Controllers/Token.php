@@ -86,21 +86,44 @@ class Token extends BaseController
         return $this->respond($response, 200);
     }
 
-    public function refreshToken(): \CodeIgniter\HTTP\ResponseInterface
+    public function refreshToken($refreshToken)
     {
-        $email = $this->request->getHeaderLine('email');
-
-        if (!$email) {
-            return $this->respond(['message' => 'Email not found in the token'], 401);
+        if (!$refreshToken) {
+            return $this->respond(['message' => 'Token not found'], 404);
         }
 
-        $token = createToken($email);
+        $key = getenv('JWT_SECRET');
+
+        try {
+            $decoded = JWT::decode($refreshToken, new Key($key, 'HS256'));
+        } catch (\Exception $e) {
+            return $this->respond(['message' => 'Invalid token'], 404);
+        }
+
+        $iat = time();
+        $exp = $iat + 3600;
+
+        $payload = array(
+            "iat" => $iat,
+            "exp" => $exp,
+            "login" => $decoded->login,
+            "roles" => $decoded->roles,
+            "status" => $decoded->status
+        );
+
+        $token = JWT::encode($payload, $key, 'HS256');
+
+        $payload['exp'] = $iat + 7200;
+
+        $refreshToken = JWT::encode($payload, $key, 'HS256');
 
         $response = [
-            'message' => 'Token sucessfully refreshed',
-            'token' => $token
+            'accessToken' => $token,
+            'accessTokenExpiresAt' => $iat + 3600,
+            'refreshToken' => $refreshToken,
+            'refreshTokenExpiresAt' => $iat + 7200
         ];
 
-        return $this->respond($response, 200);
+        return $this->respond($response, 201);
     }
 }

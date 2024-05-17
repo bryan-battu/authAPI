@@ -2,12 +2,12 @@
 
 Cette API d'authentification développée avec CodeIgniter 4 permet la gestion des comptes utilisateurs ainsi que l'authentification sécurisée via JWT (JSON Web Tokens). Elle dispose des fonctionnalités suivantes :
 
-- Création de compte
-- Login
-- Récupération des informations du compte
+- Création d'un compte utilisateur (un compte peut être ouvert ou fermé et administrateur ou simple utilisateur)
+- Récupération d'un compte utilisateur
 - Modification de l'utilisateur
-- Modification de mot de passe
+- Création d'un token de connection
 - Rafraîchissement du token d'authentification à la demande
+- Validation d'un access token
 
 L'API est protégée contre les attaques de force brute grâce à une gestion appropriée des tentatives de connexion infructueuses.
 

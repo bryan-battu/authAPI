@@ -26,13 +26,17 @@ class Token extends BaseController
         $user = $userModel->where('login', $login)->first();
 
         if(is_null($user)) {
-            return $this->respond(['error' => 'Invalid username or password.'], 404);
+            return $this->respond(['error' => 'Invalid login or password.'], 404);
+        }
+
+        if($user['status'] == 'closed') {
+            return $this->respond(['error' => 'Your account has to be opened'], 403);
         }
 
         $pwd_verify = password_verify($password, $user['password']);
 
         if(!$pwd_verify) {
-            return $this->respond(['error' => 'Invalid username or password.'], 404);
+            return $this->respond(['error' => 'Invalid login or password.'], 404);
         }
 
         $key = getenv('JWT_SECRET');
@@ -42,9 +46,11 @@ class Token extends BaseController
         $payload = array(
             "iat" => $iat,
             "exp" => $exp,
+            "uid" => $user['id'],
             "login" => $user['login'],
             "roles" => $user['roles'],
-            "status" => $user['status']
+            "status" => $user['status'],
+            "created_at" => $user['created_at']
         );
 
         $token = JWT::encode($payload, $key, 'HS256');

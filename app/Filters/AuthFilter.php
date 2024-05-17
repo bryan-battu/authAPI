@@ -2,6 +2,7 @@
 
 namespace App\Filters;
 
+use App\Models\UserModel;
 use CodeIgniter\Filters\FilterInterface;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -50,6 +51,18 @@ class AuthFilter implements FilterInterface
         try {
             $decoded = JWT::decode($token, new Key($key, 'HS256'));
             $uid = $decoded->uid ?? null;
+
+            if(!is_null($uid)) {
+                $userModel = new UserModel();
+                $user = $userModel->where('id', $uid)->first();
+                if($user['status'] == 'closed') {
+                    $response = service('response');
+                    $response->setBody('Your account has to be opened');
+                    $response->setStatusCode(403);
+                    return $response;
+                }
+            }
+
             return $request->setHeader('uid', $uid);
         } catch (Exception $ex) {
             $response = service('response');

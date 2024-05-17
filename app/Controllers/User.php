@@ -12,6 +12,11 @@ class User extends BaseController
     use ResponseTrait;
     protected $format    = 'json';
 
+    public function __construct()
+    {
+        helper('token');
+    }
+
     public function index()
     {
         $email = $this->request->getHeaderLine('email');
@@ -54,18 +59,7 @@ class User extends BaseController
             ];
             $userModel->update($user['id'], $data);
 
-            // create new token
-            $key = getenv('JWT_SECRET');
-            $iat = time();
-            $exp = $iat + 3600;
-
-            $payload = array(
-                "iat" => $iat,
-                "exp" => $exp,
-                "email" => $this->request->getVar('email'),
-            );
-
-            $token = JWT::encode($payload, $key, 'HS256');
+            $token = createToken($data['email']);
 
             $response = [
                 'message' => 'User updated successfully',
@@ -81,4 +75,53 @@ class User extends BaseController
             return $this->fail($response , 409);
         }
     }
+
+    public function modifyPassword() {
+        $email = $this->request->getHeaderLine('email');
+        $oldPassword = $this->request->getVar('old_password');
+
+        if (!$email) {
+            return $this->respond(['message' => 'Email not found in the token'], 401);
+        }
+
+        if (!$oldPassword) {
+            return $this->respond(['message' => 'Email or old password not found'], 401);
+        }
+
+        $userModel = new UserModel();
+        $user = $userModel->where('email', $email)->first();
+
+        if (!$user) {
+            return $this->respond(['message' => 'User not found'], 404);
+        }
+
+        if (!password_verify($oldPassword, $user['password'])) {
+            return $this->respond(['message' => 'Incorrect old password'], 401);
+        }
+
+        $rules = [
+            'password' => ['rules' => 'required|min_length[8]|max_length[255]'],
+            'confirmed_password'  => [ 'label' => 'confirmed password', 'rules' => 'matches[password]']
+        ];
+
+        if($this->validate($rules)){
+            $data = [
+                'password' => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
+            ];
+            $userModel->update($user['id'], $data);
+
+            $response = [
+                'message' => 'Password updated successfully'
+            ];
+
+            return $this->respond($response, 200);
+        } else {
+            $response = [
+                'errors' => $this->validator->getErrors(),
+                'message' => 'Invalid Inputs'
+            ];
+            return $this->fail($response , 409);
+        }
+    }
+
 }

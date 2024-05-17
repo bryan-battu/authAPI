@@ -9,6 +9,12 @@ use Firebase\JWT\JWT;
 class Token extends BaseController
 {
     use ResponseTrait;
+
+    public function __construct()
+    {
+        helper('token');
+    }
+
     public function refreshToken(): \CodeIgniter\HTTP\ResponseInterface
     {
         $email = $this->request->getHeaderLine('email');
@@ -17,17 +23,7 @@ class Token extends BaseController
             return $this->respond(['message' => 'Email not found in the token'], 401);
         }
 
-        $key = getenv('JWT_SECRET');
-        $iat = time();
-        $exp = $iat + 3600;
-
-        $payload = array(
-            "iat" => $iat,
-            "exp" => $exp,
-            "email" => $email
-        );
-
-        $token = JWT::encode($payload, $key, 'HS256');
+        $token = createToken($email);
 
         $response = [
             'message' => 'Token sucessfully refreshed',

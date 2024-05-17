@@ -35,8 +35,6 @@ class Token extends BaseController
             return $this->respond(['error' => 'Invalid username or password.'], 404);
         }
 
-        session()->remove('failed_login_attempts');
-
         $key = getenv('JWT_SECRET');
         $iat = time();
         $exp = $iat + 3600;

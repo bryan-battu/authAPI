@@ -22,7 +22,7 @@ class User extends BaseController
         $uid = $this->request->getHeaderLine('uid');
 
         $userModel = new UserModel();
-        $user = $userModel->where('uid', $uid)->first();
+        $user = $userModel->where('id', $uid)->first();
 
         if (!$user) {
             return $this->respond(['message' => 'User not found'], 404);
@@ -52,7 +52,7 @@ class User extends BaseController
 
                 return $this->respond($response);
             } else {
-                $user = $userModel->where('uid', $id)->first();
+                $user = $userModel->where('id', $id)->first();
 
                 if (!$user) {
                     return $this->respond(['message' => 'User not found'], 404);
@@ -72,93 +72,62 @@ class User extends BaseController
         }
     }
 
-    public function editUser() {
-        $email = $this->request->getHeaderLine('email');
+    public function edit($id) {
+        $userModel = new UserModel();
+        $user = $userModel->where('id', $id)->first();
 
-        if (!$email) {
-            return $this->respond(['message' => 'Email not found in the token'], 401);
+        if (!$user) {
+            return $this->respond(['message' => 'User not found'], 404);
         }
 
-        $userModel = new UserModel();
-        $user = $userModel->where('email', $email)->first();
+        if (!in_array('ROLE_ADMIN', explode(',', $user['roles']))) {
+            $response = [
+                'message' => 'You do not have permission to edit user'
+            ];
+
+            return $this->respond($response, 403);
+        }
+
+        $user = $userModel->where('id', $id)->first();
 
         if (!$user) {
             return $this->respond(['message' => 'User not found'], 404);
         }
 
         $rules = [
-            'email' => ['rules' => 'required|min_length[4]|max_length[255]|valid_email|is_unique[users.email]']
-        ];
-
-        if($this->validate($rules)){
-            $data = [
-                'email'    => $this->request->getVar('email'),
-            ];
-            $userModel->update($user['id'], $data);
-
-            $token = createToken($data['email']);
-
-            $response = [
-                'message' => 'User updated successfully',
-                'token' => $token
-            ];
-
-            return $this->respond($response, 200);
-        }else{
-            $response = [
-                'errors' => $this->validator->getErrors(),
-                'message' => 'Invalid Inputs'
-            ];
-            return $this->fail($response , 409);
-        }
-    }
-
-    public function modifyPassword() {
-        $email = $this->request->getHeaderLine('email');
-        $oldPassword = $this->request->getVar('old_password');
-
-        if (!$email) {
-            return $this->respond(['message' => 'Email not found in the token'], 401);
-        }
-
-        if (!$oldPassword) {
-            return $this->respond(['message' => 'Email or old password not found'], 401);
-        }
-
-        $userModel = new UserModel();
-        $user = $userModel->where('email', $email)->first();
-
-        if (!$user) {
-            return $this->respond(['message' => 'User not found'], 404);
-        }
-
-        if (!password_verify($oldPassword, $user['password'])) {
-            return $this->respond(['message' => 'Incorrect old password'], 401);
-        }
-
-        $rules = [
+            'login' => ['rules' => 'required|min_length[4]|max_length[255]|is_unique[users.login]'],
             'password' => ['rules' => 'required|min_length[8]|max_length[255]'],
-            'confirmed_password'  => [ 'label' => 'confirmed password', 'rules' => 'matches[password]']
+            'roles' => ['rules' => 'required'],
+            'status' => ['rules' => 'required|in_list[open,closed]'],
         ];
 
-        if($this->validate($rules)){
+        if ($this->validate($rules)) {
             $data = [
-                'password' => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
+                'login'      => $this->request->getVar('login'),
+                'password'   => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
+                'roles'      => $this->request->getVar('roles'),
+                'status'     => $this->request->getVar('status'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ];
+
             $userModel->update($user['id'], $data);
 
             $response = [
-                'message' => 'Password updated successfully'
+                'uid' => $user['uid'],
+                'login' => $data['login'],
+                'roles' => $data['roles'],
+                'status' => $data['status'],
+                'created_at' => $user['created_at'],
+                'updated_at' => $data['updated_at'],
             ];
 
-            return $this->respond($response, 200);
+            return $this->respond($response);
         } else {
             $response = [
                 'errors' => $this->validator->getErrors(),
                 'message' => 'Invalid Inputs'
             ];
-            return $this->fail($response , 409);
+            return $this->fail($response, 409);
         }
     }
-
 }

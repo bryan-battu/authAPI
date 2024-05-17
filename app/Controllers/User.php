@@ -17,22 +17,59 @@ class User extends BaseController
         helper('token');
     }
 
-    public function index()
+    public function index($id)
     {
-        $email = $this->request->getHeaderLine('email');
-
-        if (!$email) {
-            return $this->respond(['message' => 'Email not found in the token'], 401);
-        }
+        $uid = $this->request->getHeaderLine('uid');
 
         $userModel = new UserModel();
-        $user = $userModel->where('email', $email)->first();
+        $user = $userModel->where('uid', $uid)->first();
 
         if (!$user) {
             return $this->respond(['message' => 'User not found'], 404);
         }
 
-        return $this->respond($user);
+        if (!in_array('ROLE_ADMIN', explode(',', $user['roles']))) {
+            $response = [
+                'uid' => $user['uid'],
+                'login' => $user['login'],
+                'roles' => $user['roles'],
+                'status' => $user['status'],
+                'created_at' => $user['created_at'],
+                'updated_at' => $user['updated_at'],
+            ];
+
+            return $this->respond($response);
+        } else {
+            if ($id == 'me') {
+                $response = [
+                    'uid' => $user['uid'],
+                    'login' => $user['login'],
+                    'roles' => $user['roles'],
+                    'status' => $user['status'],
+                    'created_at' => $user['created_at'],
+                    'updated_at' => $user['updated_at'],
+                ];
+
+                return $this->respond($response);
+            } else {
+                $user = $userModel->where('uid', $id)->first();
+
+                if (!$user) {
+                    return $this->respond(['message' => 'User not found'], 404);
+                }
+
+                $response = [
+                    'uid' => $user['uid'],
+                    'login' => $user['login'],
+                    'roles' => $user['roles'],
+                    'status' => $user['status'],
+                    'created_at' => $user['created_at'],
+                    'updated_at' => $user['updated_at'],
+                ];
+
+                return $this->respond($response);
+            }
+        }
     }
 
     public function editUser() {

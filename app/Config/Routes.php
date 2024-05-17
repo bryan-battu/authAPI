@@ -7,9 +7,9 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', 'Home::index');
 $routes->group("api", function ($routes) {
-    $routes->post("register", "Register::index");
+    $routes->post("account", "Register::index");
     $routes->post("login", "Login::index");
-    $routes->get("user", "User::index", ['filter' => 'authFilter']);
+    $routes->get("account/(:segment)", "User::index/$1", ['filter' => 'authFilter']);
     $routes->post("user", "User::editUser", ['filter' => 'authFilter']);
     $routes->get("refreshToken", "Token::refreshToken", ['filter' => 'authFilter']);
     $routes->post("modifyPassword", "User::modifyPassword", ['filter' => 'authFilter']);

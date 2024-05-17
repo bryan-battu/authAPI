@@ -2,10 +2,9 @@
 
 namespace App\Controllers;
 
-use App\Controllers\BaseController;
 use CodeIgniter\API\ResponseTrait;
 use App\Models\UserModel;
-
+use CodeIgniter\Controller;
 
 class Register extends BaseController
 {
@@ -14,27 +13,45 @@ class Register extends BaseController
     public function index()
     {
         $rules = [
-            'email' => ['rules' => 'required|min_length[4]|max_length[255]|valid_email|is_unique[users.email]'],
+            'login' => ['rules' => 'required|min_length[4]|max_length[255]|is_unique[users.login]'],
             'password' => ['rules' => 'required|min_length[8]|max_length[255]'],
-            'confirmed_password'  => [ 'label' => 'confirmed password', 'rules' => 'matches[password]']
+            'roles' => ['rules' => 'required'],
+            'status' => ['rules' => 'required|in_list[open,closed]'],
         ];
 
-        if($this->validate($rules)){
+        if ($this->validate($rules)) {
+
             $model = new UserModel();
             $data = [
-                'email'    => $this->request->getVar('email'),
-                'password' => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
-                'created_at' => date('Y-m-d H:i:s')
+                'login'      => $this->request->getVar('login'),
+                'password'   => password_hash($this->request->getVar('password'), PASSWORD_DEFAULT),
+                'roles'      => $this->request->getVar('roles'),
+                'status'     => $this->request->getVar('status'),
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s'),
             ];
-            $model->save($data);
+            try {
+                $model->save($data);
+            } catch (\ReflectionException $e) {
+                var_dump($e->getMessage() . ' ' . $e->getLine());die;
+            }
 
-            return $this->respond(['message' => 'Registered Successfully'], 200);
-        }else{
+            $response = [
+                'uid' => $model->getInsertID(),
+                'login' => $data['login'],
+                'roles' => $data['roles'],
+                'status' => $data['status'],
+                'created_at' => $data['created_at'],
+                'updated_at' => $data['updated_at'],
+            ];
+
+            return $this->respondCreated($response);
+        } else {
             $response = [
                 'errors' => $this->validator->getErrors(),
                 'message' => 'Invalid Inputs'
             ];
-            return $this->fail($response , 409);
+            return $this->fail($response, 409);
         }
     }
 }
